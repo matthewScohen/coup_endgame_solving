@@ -15,7 +15,7 @@ class CoupMatchupEnvironment:
 
     def _get_actions(self, state, player):
         """
-        Returns a list of all actions 'player' can take from 'state'. Actions will change if the state is a
+        Returns a list of all actions 'player' can take from 'state'. Actions will be different if the state is a
         counter-action state or regular state and also depend on the player since players can have different cards
 
         :param state: The state from which player is taking actions
@@ -33,7 +33,8 @@ class CoupMatchupEnvironment:
 
     def _solve_winning_region(self, player):
         """
-        Calculates and returns the winning region of player
+        Calculates and returns the winning region of player using the two player attractor algorithm
+
         :param player: An integer representing the player who's winning region should be returned
         :return: A list of states that are winning for player
         """
@@ -48,7 +49,6 @@ class CoupMatchupEnvironment:
 
     def get_win_region(self, player):
         """
-        Returns the stored list of winning states for player
         :param player: An integer representing the player who's winning region should be returned
         :return: The stored list of winning states for player
         """
