@@ -10,9 +10,14 @@ class CoupMatchupEnvironment:
         """
         pass
 
-    def get_actions(self):
+    def get_actions(self, state, player):
         """
-        :return: A list of all possible actions
+        Returns a list of all actions 'player' can take from 'state'. Actions will change if the state is a
+        counter-action state or regular state and also depend on the player since players can have different cards
+
+        :param state: The state from which player is taking actions
+        :param player: An integer representing the player who's actions should be returned
+        :return: A list of all possible actions for player
         """
         pass
 
