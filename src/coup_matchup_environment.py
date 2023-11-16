@@ -1,4 +1,5 @@
 import itertools
+from card_enum import CARD
 
 
 class CoupMatchupEnvironment:
@@ -30,7 +31,6 @@ class CoupMatchupEnvironment:
 
         possible_states = itertools.product(player1_states, player2_states, possible_turn_values,
                                             possible_counter_state_values)
-
         # remove states where both players have 2 dead cards
         possible_states = [state for state in possible_states if
                            state[0][0] != "dead" or state[0][1] != "dead" or state[1][0] != "dead"
@@ -38,6 +38,7 @@ class CoupMatchupEnvironment:
         # TODO can we remove states where 1 player is dead and the other has more than 9(?) coins?
         return list(possible_states)
 
+    @staticmethod
     def _get_player_states(self, player_cards):
         """
         player_states are of the form (card, card, coin_count) where card is either the value of the
@@ -52,7 +53,6 @@ class CoupMatchupEnvironment:
         coin_states = [n for n in range(13)]
         player_states = itertools.product(card0_states, card1_states, coin_states)
         return list(player_states)
-
 
     def get_start_game_state(self):
         """
