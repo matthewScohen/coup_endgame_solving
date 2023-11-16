@@ -1,32 +1,35 @@
 class CoupMatchupEnvironment:
     def __init__(self, initial_state):
         self.initial_state = initial_state
+
+        self.transitions = None
+        self.states = None
         self._player_1_winning_region = None
         self._player_2_winning_region = None
 
-    def get_states(self):
+    def _get_states(self):
         """
         :return: A list of all possible states
         """
         pass
 
-    def get_actions(self, state, player):
+    def _get_actions(self, state, player):
         """
         Returns a list of all actions 'player' can take from 'state'. Actions will change if the state is a
         counter-action state or regular state and also depend on the player since players can have different cards
 
         :param state: The state from which player is taking actions
-        :param player: An integer representing the player who's actions should be returned
+        :param player: An integer representing the player whose actions should be returned
         :return: A list of all possible actions for player
         """
         pass
 
-    def get_transition(self):
+    def _get_transition(self):
         """
         :return: A transition dictionary where the value of trans[state][action] is the resulting state for taking
         'action' from 'state'.
         """
-        pass
+        return None
 
     def _solve_winning_region(self, player):
         """
@@ -37,9 +40,9 @@ class CoupMatchupEnvironment:
         return list()
 
     def solve(self):
-        """
-        Calculate the winning regions of both players and store them in the winning region class variables
-        """
+        self.transitions = self._get_transition()
+        self.states = self._get_states()
+
         self._player_1_winning_region = self._solve_winning_region(player=1)
         self._player_2_winning_region = self._solve_winning_region(player=2)
 
