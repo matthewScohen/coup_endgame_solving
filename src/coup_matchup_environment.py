@@ -23,7 +23,8 @@ class CoupMatchupEnvironment:
 
     def get_transition(self):
         """
-        :return: A transition dictionary of the form trans[state][action][new_state]
+        :return: A transition dictionary where the value of trans[state][action] is the resulting state for taking
+        'action' from 'state'.
         """
         pass
 
