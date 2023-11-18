@@ -69,25 +69,46 @@ class CoupMatchupEnvironment:
         """
         :return: A tuple of all possible actions
         """
-        return constants.actions
+        actions = list(constants.actions)
+        actions.extend(constants.counter_actions)
+        return tuple(actions)
 
-    def _get_counter_actions(self):
+    def _get_enabled_actions(self, state):
         """
-        :return: A tuple of all possible counter actions
-        """
-        return constants.counter_actions
-
-    def _get_enabled_actions(self, state, player):
-        """
-        Returns a list of all actions 'player' can take from 'state'. Actions will include counter-actions if the state
+        Returns a list of all actions that can be taken from 'state'. Actions will include counter-actions if the state
         is a counter-action state.
 
         :param state: The state from which player is taking actions
-        :param player: An integer representing the player whose actions should be returned
-        :return: A list of all possible actions for player
+        :return: A list of all possible actions that can be taken from 'state'
         """
-        actions = None
-        return actions
+        player = state[0] if state[2] == 1 else state[1]
+        player_coins = player[2]
+        enabled_acts = list()
+
+        # state is action state
+        if state[3] == 0:
+            enabled_acts.append(constants.INCOME)
+            enabled_acts.append(constants.FOREIGN_AID)
+            if player_coins >= 7:
+                enabled_acts.append(constants.COUP)
+            if constants.DUKE in player:
+                enabled_acts.append(constants.TAX)
+            if constants.ASSASSIN in player and player_coins >= 3:
+                enabled_acts.append(constants.ASSASSINATE)
+            if constants.CAPTAIN in player:
+                enabled_acts.append(constants.STEAL)
+        # state is counter-action state
+        elif state[3] == 1:
+            if constants.DUKE in player:
+                enabled_acts.append(constants.BLOCK_FOREIGN_AID)
+            if constants.CAPTAIN in player or constants.AMBASSADOR in player:
+                enabled_acts.append(constants.BLOCK_STEAL)
+            if constants.CONTESSA in player:
+                enabled_acts.append(constants.BLOCK_ASSASSINATE)
+        else:
+            raise NotImplementedError(f"Error value of {state[3]} not allowed for counter-action indicator")
+
+        return enabled_acts
 
     def _get_transitions(self):
         """
@@ -97,9 +118,10 @@ class CoupMatchupEnvironment:
             zip(self.states, [dict(zip(self.actions, [None for _ in self.actions])) for _ in self.states]))
         for state in transitions:
             for action in state:
-                transitions[state][action] = self._transition(state, action)
+                if action in self._get_enabled_actions(state):
+                    transitions[state][action] = self._transition(state, action)
         return transitions
-    
+
     @staticmethod
     def _transition(state, action):
         """

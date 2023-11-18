@@ -10,10 +10,10 @@ cards = (DUKE, ASSASSIN, AMBASSADOR, CAPTAIN, CONTESSA)
 INCOME = "income"
 FOREIGN_AID = "foreign_aid"
 COUP = "coup"
-TAX = "TAX"
+TAX = "tax"
 ASSASSINATE = "assassinate"
 # EXCHANGE = "exchange"
-STEAL = "STEAL"
+STEAL = "steal"
 actions = (INCOME, FOREIGN_AID, COUP, TAX, ASSASSINATE, STEAL)
 
 # DEFINE COUNTER ACTIONS
