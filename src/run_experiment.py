@@ -1,12 +1,15 @@
+import constants
+
 from coup_matchup_environment import CoupMatchupEnvironment
-from card_enum import CARD
+
 
 def main():
-    player1_cards = (CARD.CAPTAIN.value, CARD.CONTESSA.value)
-    player2_cards = (CARD.DUKE.value, CARD.ASSASSIN.value)
+    player1_cards = (constants.CAPTAIN, constants.CONTESSA)
+    player2_cards = (constants.DUKE, constants.ASSASSIN)
     matchup = CoupMatchupEnvironment(player1_cards, player2_cards)
-    print(matchup._get_states())
-    # matchup.solve()
+    matchup.solve()
+    state = ((constants.CAPTAIN, constants.CONTESSA, 0), (constants.DUKE, constants.ASSASSIN, 0), 1, 0)
+    print(matchup._get_transitions()[state])
     # print(f"Player {1 if initial_state in matchup.get_win_region(1) else 2} wins")
 
 if __name__ == "__main__":

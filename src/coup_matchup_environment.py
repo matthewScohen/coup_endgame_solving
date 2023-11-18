@@ -1,5 +1,5 @@
 import itertools
-from card_enum import CARD
+import constants
 
 
 class CoupMatchupEnvironment:
@@ -11,8 +11,10 @@ class CoupMatchupEnvironment:
         self.player1_cards = player1_cards
         self.player2_cards = player2_cards
 
+        # self.transitions[state][action] = new_state
         self.transitions = None
         self.states = None
+        self.actions = None
         self._player_1_winning_region = None
         self._player_2_winning_region = None
 
@@ -39,7 +41,7 @@ class CoupMatchupEnvironment:
         return list(possible_states)
 
     @staticmethod
-    def _get_player_states(self, player_cards):
+    def _get_player_states(player_cards):
         """
         player_states are of the form (card, card, coin_count) where card is either the value of the
         alive card or "dead" and coin_count is the number of coins the player has.
@@ -63,24 +65,50 @@ class CoupMatchupEnvironment:
         start_game_state = (player1_state, player2_state, 1, 0)
         return start_game_state
 
-    def _get_actions(self, state, player):
+    def _get_actions(self):
         """
-        Returns a list of all actions 'player' can take from 'state'. Actions will be different if the state is a
-        counter-action state or regular state and also depend on the player since players can have different cards
+        :return: A tuple of all possible actions
+        """
+        return constants.actions
+
+    def _get_counter_actions(self):
+        """
+        :return: A tuple of all possible counter actions
+        """
+        return constants.counter_actions
+
+    def _get_enabled_actions(self, state, player):
+        """
+        Returns a list of all actions 'player' can take from 'state'. Actions will include counter-actions if the state
+        is a counter-action state.
 
         :param state: The state from which player is taking actions
         :param player: An integer representing the player whose actions should be returned
         :return: A list of all possible actions for player
         """
-        pass
+        actions = None
+        return actions
 
-    def _get_transition(self):
+    def _get_transitions(self):
         """
-        :return: A transition dictionary where the value of trans[state][action] is the resulting state for taking
-        'action' from 'state'.
+        :return: A transition dictionary where transitions[state][action] = new_state
         """
+        transitions = dict(
+            zip(self.states, [dict(zip(self.actions, [None for _ in self.actions])) for _ in self.states]))
+        for state in transitions:
+            for action in state:
+                transitions[state][action] = self._transition(state, action)
+        return transitions
+    
+    @staticmethod
+    def _transition(state, action):
+        """
+        :param state: An initial state the action is being taken from
+        :param action: The action being taken from state
+        :return: The resulting state from taking action from the input state
+        """
+        # TODO implement game transition logic here
         return None
-
     def _solve_winning_region(self, player):
         """
         Calculates and returns the winning region of player using the two player attractor algorithm
@@ -92,7 +120,8 @@ class CoupMatchupEnvironment:
 
     def solve(self):
         self.states = self._get_states()
-        self.transitions = self._get_transition()
+        self.actions = self._get_actions()
+        self.transitions = self._get_transitions()
 
         self._player_1_winning_region = self._solve_winning_region(player=1)
         self._player_2_winning_region = self._solve_winning_region(player=2)
