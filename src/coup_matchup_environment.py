@@ -37,7 +37,6 @@ class CoupMatchupEnvironment:
         possible_states = [state for state in possible_states if
                            state[0][0] != "dead" or state[0][1] != "dead" or state[1][0] != "dead"
                            or state[0][1] != "dead"]
-        # TODO can we remove states where 1 player is dead and the other has more than 9(?) coins?
         return list(possible_states)
 
     @staticmethod
@@ -67,7 +66,7 @@ class CoupMatchupEnvironment:
 
     def _get_actions(self):
         """
-        :return: A tuple of all possible actions
+        :return: A tuple of all possible actions (including counter-actions)
         """
         actions = list(constants.actions)
         actions.extend(constants.counter_actions)
@@ -75,8 +74,7 @@ class CoupMatchupEnvironment:
 
     def _get_enabled_actions(self, state):
         """
-        Returns a list of all actions that can be taken from 'state'. Actions will include counter-actions if the state
-        is a counter-action state.
+        Returns a list of all actions/counter-actions that can be taken from 'state'.
 
         :param state: The state from which player is taking actions
         :return: A list of all possible actions that can be taken from 'state'
@@ -120,6 +118,8 @@ class CoupMatchupEnvironment:
             for action in state:
                 if action in self._get_enabled_actions(state):
                     transitions[state][action] = self._transition(state, action)
+                else:
+                    transitions[state][action] = constants.ACTION_DISABLED
         return transitions
 
     @staticmethod
@@ -131,6 +131,7 @@ class CoupMatchupEnvironment:
         """
         # TODO implement game transition logic here
         return None
+
     def _solve_winning_region(self, player):
         """
         Calculates and returns the winning region of player using the two player attractor algorithm
@@ -154,10 +155,12 @@ class CoupMatchupEnvironment:
         :return: The stored list of winning states for player
         """
         if player == 1:
-            assert self._player_1_winning_region is not None, f"Player 1 winning region not defined for {self}"
+            assert self._player_1_winning_region is not None, f"Player {player} winning region not defined for {self} "\
+                                                              f"call {self}.solve()"
             return self._player_1_winning_region
         elif player == 2:
-            assert self._player_2_winning_region is not None, f"Player 2 winning region not defined for {self}"
+            assert self._player_2_winning_region is not None, f"Player {player} winning region not defined for {self} "\
+                                                              f"call {self}.solve()"
             return self._player_2_winning_region
         else:
             raise Exception(f"Player {player} not defined in {self}")

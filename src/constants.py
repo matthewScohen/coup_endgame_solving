@@ -21,3 +21,6 @@ BLOCK_FOREIGN_AID = "block_foreign_aid"
 BLOCK_STEAL = "block_steal"
 BLOCK_ASSASSINATE = "block_assassinate"
 counter_actions = (BLOCK_FOREIGN_AID, BLOCK_STEAL, BLOCK_ASSASSINATE)
+
+# DEFINE OTHER CONSTANTS
+ACTION_DISABLED = "action_disabled"
