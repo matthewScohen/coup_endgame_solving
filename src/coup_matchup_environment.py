@@ -26,6 +26,15 @@ class CoupMatchupEnvironment:
 
         :return: A list of all possible states
         """
+        # TODO we need to change state to account for the fact that what happens when you take a counter action depends
+        # TODO on the previous action. We don't want to make the game reliant on previous states so we should probably
+        # TODO encode the ability to take a counter action in the state. SO instead of (player1_state, player2_state, turn, counter_state)
+        # TODO it should be something like (player1_state, player2_state, turn, assassinate_counter_state, foregin_aid_couter_state, steal_counter_state)
+        # TODO so the action that can be countered is indicated in the state
+        # TODO alternatly we could just encode this in the action, eg if you assassinate just have the transition function
+        # TODO check if the other player has a contessa. This is probably equivalent but I think its better to do the counter
+        # TODO state option since that will more closely model the game even if they are equal techincally.
+        # TODO JUST PUTTING THIS HERE SO I DON'T FORGET
         player1_states = self._get_player_states(self.player1_cards)
         player2_states = self._get_player_states(self.player2_cards)
         possible_turn_values = (1, 2)

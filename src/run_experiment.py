@@ -13,5 +13,6 @@ def main():
     print(matchup._get_enabled_actions(state))
     # print(f"Player {1 if initial_state in matchup.get_win_region(1) else 2} wins")
 
+
 if __name__ == "__main__":
     main()
