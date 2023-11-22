@@ -20,32 +20,28 @@ class CoupMatchupEnvironment:
 
     def _get_states(self):
         """
-        Game states are of the form (player1_state, player2_state, turn, counter_state) player1_state and player2_state
-        are player_states (see _get_player_states). turn = {1,2} and indicates which player takes an action from the
-        state. counter_state is a boolean value that indicates if the player takes an action or counter action
+        Game states are of the form
+        (player1_state, player2_state, turn, assassinate_counter_state, foregin_aid_couter_state, steal_counter_state)
+        player1_state and player2_state are player_states (see _get_player_states). turn = {1,2} and indicates which
+        player takes an action from the state. The counter_state fields are boolean values that indicate which (if any)
+        counter action can be taken from that state.
 
         :return: A list of all possible states
         """
-        # TODO we need to change state to account for the fact that what happens when you take a counter action depends
-        # TODO on the previous action. We don't want to make the game reliant on previous states so we should probably
-        # TODO encode the ability to take a counter action in the state. SO instead of (player1_state, player2_state, turn, counter_state)
-        # TODO it should be something like (player1_state, player2_state, turn, assassinate_counter_state, foregin_aid_couter_state, steal_counter_state)
-        # TODO so the action that can be countered is indicated in the state
-        # TODO alternatly we could just encode this in the action, eg if you assassinate just have the transition function
-        # TODO check if the other player has a contessa. This is probably equivalent but I think its better to do the counter
-        # TODO state option since that will more closely model the game even if they are equal techincally.
-        # TODO JUST PUTTING THIS HERE SO I DON'T FORGET
         player1_states = self._get_player_states(self.player1_cards)
         player2_states = self._get_player_states(self.player2_cards)
         possible_turn_values = (1, 2)
-        possible_counter_state_values = (0, 1)
+        possible_assassinate_counter_state_values = (0, 1)
+        possible_foreign_aid_counter_state_values = (0,1)
+        possible_steal_counter_state_values = (0,1)
 
         possible_states = itertools.product(player1_states, player2_states, possible_turn_values,
-                                            possible_counter_state_values)
+                                            possible_assassinate_counter_state_values, possible_foreign_aid_counter_state_values,
+                                            possible_steal_counter_state_values)
         # remove states where both players have 2 dead cards
         possible_states = [state for state in possible_states if
                            state[0][0] != "dead" or state[0][1] != "dead" or state[1][0] != "dead"
-                           or state[0][1] != "dead"]
+                           or state[1][1] != "dead"]
         return list(possible_states)
 
     @staticmethod
@@ -70,7 +66,7 @@ class CoupMatchupEnvironment:
         """
         player1_state = (self.player1_cards[0], self.player1_cards[1], 2)
         player2_state = (self.player2_cards[0], self.player2_cards[1], 2)
-        start_game_state = (player1_state, player2_state, 1, 0)
+        start_game_state = (player1_state, player2_state, 1, 0, 0, 0)
         return start_game_state
 
     def _get_actions(self):
@@ -92,8 +88,8 @@ class CoupMatchupEnvironment:
         player_coins = player[2]
         enabled_acts = list()
 
-        # state is action state
-        if state[3] == 0:
+        # ACTION STATE
+        if state[3] == 0 and state[4] == 0 and state[5] == 0:
             enabled_acts.append(constants.INCOME)
             enabled_acts.append(constants.FOREIGN_AID)
             if player_coins >= 7:
@@ -104,16 +100,19 @@ class CoupMatchupEnvironment:
                 enabled_acts.append(constants.ASSASSINATE)
             if constants.CAPTAIN in player:
                 enabled_acts.append(constants.STEAL)
-        # state is counter-action state
-        elif state[3] == 1:
-            if constants.DUKE in player:
-                enabled_acts.append(constants.BLOCK_FOREIGN_AID)
-            if constants.CAPTAIN in player or constants.AMBASSADOR in player:
-                enabled_acts.append(constants.BLOCK_STEAL)
-            if constants.CONTESSA in player:
-                enabled_acts.append(constants.BLOCK_ASSASSINATE)
+        # COUNTER ACTION STATES
+        # counter-assassinate state
+        elif state[3] == 1 and constants.CONTESSA in player:
+            enabled_acts.append(constants.BLOCK_ASSASSINATE)
+        # counter-foreign-aid state
+        elif state[4] == 1 and constants.DUKE in player:
+            enabled_acts.append(constants.BLOCK_FOREIGN_AID)
+        # counter-steal state
+        elif state[5] == 1 and (constants.CAPTAIN in player or constants.AMBASSADOR in player):
+            enabled_acts.append(constants.BLOCK_STEAL)
+        # state is counter-state and you cannot counter the action
         else:
-            raise NotImplementedError(f"Error value of {state[3]} not allowed for counter-action indicator")
+            enabled_acts.append(constants.NO_ACTION)
 
         return enabled_acts
 

@@ -7,6 +7,7 @@ CONTESSA = "contessa"
 cards = (DUKE, ASSASSIN, AMBASSADOR, CAPTAIN, CONTESSA)
 
 # DEFINE ACTIONS
+NO_ACTION = "no_action"
 INCOME = "income"
 FOREIGN_AID = "foreign_aid"
 COUP = "coup"
