@@ -24,7 +24,8 @@ class CoupMatchupEnvironment:
         (player1_state, player2_state, turn, assassinate_counter_state, foregin_aid_couter_state, steal_counter_state)
         player1_state and player2_state are player_states (see _get_player_states). turn = {1,2} and indicates which
         player takes an action from the state. The counter_state fields are boolean values that indicate which (if any)
-        counter action can be taken from that state.
+        counter action can be taken from that state. The coup counter state indicates it is a state following the other
+        player's coup action (from this state the only actions are to choose which card to kill)
 
         :return: A list of all possible states
         """
@@ -34,10 +35,11 @@ class CoupMatchupEnvironment:
         possible_assassinate_counter_state_values = (0, 1)
         possible_foreign_aid_counter_state_values = (0,1)
         possible_steal_counter_state_values = (0,1)
+        possible_coup_counter_state_values = (0,1)
 
         possible_states = itertools.product(player1_states, player2_states, possible_turn_values,
                                             possible_assassinate_counter_state_values, possible_foreign_aid_counter_state_values,
-                                            possible_steal_counter_state_values)
+                                            possible_steal_counter_state_values, possible_coup_counter_state_values)
         # remove states where both players have 2 dead cards
         possible_states = [state for state in possible_states if
                            state[0][0] != "dead" or state[0][1] != "dead" or state[1][0] != "dead"
@@ -66,7 +68,7 @@ class CoupMatchupEnvironment:
         """
         player1_state = (self.player1_cards[0], self.player1_cards[1], 2)
         player2_state = (self.player2_cards[0], self.player2_cards[1], 2)
-        start_game_state = (player1_state, player2_state, 1, 0, 0, 0)
+        start_game_state = (player1_state, player2_state, 1, 0, 0, 0, 0)
         return start_game_state
 
     def _get_actions(self):
@@ -89,7 +91,7 @@ class CoupMatchupEnvironment:
         enabled_acts = list()
 
         # ACTION STATE
-        if state[3] == 0 and state[4] == 0 and state[5] == 0:
+        if state[3] == 0 and state[4] == 0 and state[5] == 0 and state[6] == 0:
             enabled_acts.append(constants.INCOME)
             enabled_acts.append(constants.FOREIGN_AID)
             if player_coins >= 7:
@@ -102,14 +104,25 @@ class CoupMatchupEnvironment:
                 enabled_acts.append(constants.STEAL)
         # COUNTER ACTION STATES
         # counter-assassinate state
-        elif state[3] == 1 and constants.CONTESSA in player:
-            enabled_acts.append(constants.BLOCK_ASSASSINATE)
+        elif state[3] == 1:
+            if player[0] != constants.DEAD:
+                enabled_acts.append(constants.KILL_CARD_1)
+            if player[1] != constants.DEAD:
+                enabled_acts.append(constants.KILL_CARD_2)
+            if constants.CONTESSA in player:
+                enabled_acts.append(constants.BLOCK_ASSASSINATE)
         # counter-foreign-aid state
         elif state[4] == 1 and constants.DUKE in player:
             enabled_acts.append(constants.BLOCK_FOREIGN_AID)
         # counter-steal state
         elif state[5] == 1 and (constants.CAPTAIN in player or constants.AMBASSADOR in player):
             enabled_acts.append(constants.BLOCK_STEAL)
+        # counter-coup state
+        elif state[6] == 1:
+            if player[0] != constants.DEAD:
+                enabled_acts.append(constants.KILL_CARD_1)
+            if player[1] != constants.DEAD:
+                enabled_acts.append(constants.KILL_CARD_2)
         # state is counter-state and you cannot counter the action
         else:
             enabled_acts.append(constants.NO_ACTION)
@@ -138,7 +151,73 @@ class CoupMatchupEnvironment:
         :return: The resulting state from taking action from the input state
         """
         # TODO implement game transition logic here
-        return None
+        # unpack state
+        player1_state, player2_state, turn, assassinate_counter_state, foreign_aid_couter_state, \
+        steal_counter_state, coup_counter_state = state
+
+        new_player1_state = player1_state
+        new_player2_state = player2_state
+        new_turn = turn
+        new_assassinate_counter_state = assassinate_counter_state
+        new_foreign_aid_counter_state = foreign_aid_couter_state
+        new_steal_counter_state = steal_counter_state
+        new_coup_counter_state = coup_counter_state
+
+        # state is action state
+        if assassinate_counter_state == 0 and foreign_aid_couter_state == 0 and steal_counter_state == 0 and coup_counter_state == 0:
+            new_turn = 1 if turn == 2 else 2
+            if action == constants.INCOME:
+                if turn == 1:
+                    new_player1_state = (player1_state[0], player1_state[1], player1_state[2] + 1)
+                elif turn == 2:
+                    new_player2_state = (player2_state[0], player2_state[1], player2_state[2] + 1)
+            elif action == constants.FOREIGN_AID:
+                pass
+            elif action == constants.COUP:
+                pass
+            elif action == constants.TAX:
+                pass
+            elif action == constants.ASSASSINATE:
+                pass
+            elif action == constants.STEAL:
+                pass
+
+        # state is a counter_state
+        if assassinate_counter_state == 1:
+            new_assassinate_counter_state = 0
+            if action == constants.BLOCK_ASSASSINATE:
+                # nothing changes if you block the assassination
+                pass
+            elif action == constants.KILL_CARD_1:
+                if turn == 1:
+                    new_player1_state = (constants.DEAD, player1_state[1], player1_state[2])
+                elif turn == 2:
+                    new_player2_state = (constants.DEAD, player2_state[1], player2_state[2])
+            elif action == constants.KILL_CARD_2:
+                if turn == 1:
+                    new_player1_state = (player1_state[0], constants.DEAD, player1_state[2])
+                elif turn == 2:
+                    new_player2_state = (player2_state[0], constants.DEAD, player2_state[2])
+        elif new_foreign_aid_counter_state == 1:
+            new_foreign_aid_counter_state = 0
+        elif steal_counter_state == 1:
+            new_steal_counter_state = 0
+        elif coup_counter_state == 1:
+            new_coup_counter_state = 0
+            if action == constants.KILL_CARD_1:
+                if turn == 1:
+                    new_player1_state = (constants.DEAD, player1_state[1], player1_state[2])
+                elif turn == 2:
+                    new_player2_state = (constants.DEAD, player2_state[1], player2_state[2])
+            elif action == constants.KILL_CARD_2:
+                if turn == 1:
+                    new_player1_state = (player1_state[0], constants.DEAD, player1_state[2])
+                elif turn == 2:
+                    new_player2_state = (player2_state[0], constants.DEAD, player2_state[2])
+
+        new_state = (new_player1_state, new_player2_state, new_turn, new_assassinate_counter_state,
+                     new_foreign_aid_counter_state, new_steal_counter_state, new_coup_counter_state)
+        return new_state
 
     def _solve_winning_region(self, player):
         """

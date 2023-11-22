@@ -21,7 +21,10 @@ actions = (INCOME, FOREIGN_AID, COUP, TAX, ASSASSINATE, STEAL)
 BLOCK_FOREIGN_AID = "block_foreign_aid"
 BLOCK_STEAL = "block_steal"
 BLOCK_ASSASSINATE = "block_assassinate"
+KILL_CARD_1 = "kill_card_1"
+KILL_CARD_2 = "kill_card_2"
 counter_actions = (BLOCK_FOREIGN_AID, BLOCK_STEAL, BLOCK_ASSASSINATE)
 
 # DEFINE OTHER CONSTANTS
 ACTION_DISABLED = "action_disabled"
+DEAD = "dead"
