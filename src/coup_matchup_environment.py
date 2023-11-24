@@ -21,7 +21,7 @@ class CoupMatchupEnvironment:
     def _get_states(self):
         """
         Game states are of the form
-        (player1_state, player2_state, turn, assassinate_counter_state, foregin_aid_couter_state, steal_counter_state)
+        (player1_state, player2_state, turn, assassinate_counter_state, foregin_aid_couter_state, steal_counter_state, coup_counter_state)
         player1_state and player2_state are player_states (see _get_player_states). turn = {1,2} and indicates which
         player takes an action from the state. The counter_state fields are boolean values that indicate which (if any)
         counter action can be taken from that state. The coup counter state indicates it is a state following the other
@@ -33,12 +33,13 @@ class CoupMatchupEnvironment:
         player2_states = self._get_player_states(self.player2_cards)
         possible_turn_values = (1, 2)
         possible_assassinate_counter_state_values = (0, 1)
-        possible_foreign_aid_counter_state_values = (0,1)
-        possible_steal_counter_state_values = (0,1)
-        possible_coup_counter_state_values = (0,1)
+        possible_foreign_aid_counter_state_values = (0, 1)
+        possible_steal_counter_state_values = (0, 1)
+        possible_coup_counter_state_values = (0, 1)
 
         possible_states = itertools.product(player1_states, player2_states, possible_turn_values,
-                                            possible_assassinate_counter_state_values, possible_foreign_aid_counter_state_values,
+                                            possible_assassinate_counter_state_values,
+                                            possible_foreign_aid_counter_state_values,
                                             possible_steal_counter_state_values, possible_coup_counter_state_values)
         # remove states where both players have 2 dead cards
         possible_states = [state for state in possible_states if
@@ -152,19 +153,19 @@ class CoupMatchupEnvironment:
         """
         # TODO implement game transition logic here
         # unpack state
-        player1_state, player2_state, turn, assassinate_counter_state, foreign_aid_couter_state, \
+        player1_state, player2_state, turn, assassinate_counter_state, foreign_aid_counter_state, \
         steal_counter_state, coup_counter_state = state
 
         new_player1_state = player1_state
         new_player2_state = player2_state
         new_turn = turn
         new_assassinate_counter_state = assassinate_counter_state
-        new_foreign_aid_counter_state = foreign_aid_couter_state
+        new_foreign_aid_counter_state = foreign_aid_counter_state
         new_steal_counter_state = steal_counter_state
         new_coup_counter_state = coup_counter_state
 
         # state is action state
-        if assassinate_counter_state == 0 and foreign_aid_couter_state == 0 and steal_counter_state == 0 and coup_counter_state == 0:
+        if assassinate_counter_state == 0 and foreign_aid_counter_state == 0 and steal_counter_state == 0 and coup_counter_state == 0:
             new_turn = 1 if turn == 2 else 2
             if action == constants.INCOME:
                 if turn == 1:
@@ -172,15 +173,18 @@ class CoupMatchupEnvironment:
                 elif turn == 2:
                     new_player2_state = (player2_state[0], player2_state[1], player2_state[2] + 1)
             elif action == constants.FOREIGN_AID:
-                pass
+                new_foreign_aid_counter_state = 1
             elif action == constants.COUP:
-                pass
+                new_coup_counter_state = 1
             elif action == constants.TAX:
-                pass
+                if turn == 1:
+                    new_player1_state = (player1_state[0], player1_state[1], player1_state[2] + 3)
+                elif turn == 2:
+                    new_player2_state = (player2_state[0], player2_state[1], player2_state[2] + 3)
             elif action == constants.ASSASSINATE:
-                pass
+                new_assassinate_counter_state = 1
             elif action == constants.STEAL:
-                pass
+                new_steal_counter_state = 1
 
         # state is a counter_state
         if assassinate_counter_state == 1:
@@ -200,8 +204,29 @@ class CoupMatchupEnvironment:
                     new_player2_state = (player2_state[0], constants.DEAD, player2_state[2])
         elif new_foreign_aid_counter_state == 1:
             new_foreign_aid_counter_state = 0
+            if action == constants.BLOCK_FOREIGN_AID:
+                # if foreign aid is block nothing happens
+                pass
+            else:
+                # the player whose turn it is NOT gets +2 coins since the turn indicates the player who is blocking
+                if turn == 1:
+                    new_player2_state = (player2_state[0], player2_state[1], player2_state[2] + 2)
+                elif turn == 2:
+                    new_player1_state = (player1_state[0], player1_state[1], player1_state[2] + 2)
         elif steal_counter_state == 1:
             new_steal_counter_state = 0
+            if action == constants.BLOCK_STEAL:
+                pass
+            else:
+                if turn == 1:
+                    # you can only steal 1 or 0 coins if the player has fewer than 2 coins
+                    coins_stolen = 2 if player1_state[2] >= 2 else player1_state[2]
+                    new_player1_state = (player1_state[0], player1_state[1], player1_state[2] - coins_stolen)
+                    new_player2_state = (player2_state[0], player2_state[1], player2_state[2] + coins_stolen)
+                elif turn == 2:
+                    coins_stolen = 2 if player2_state[2] >= 2 else player2_state[2]
+                    new_player1_state = (player1_state[0], player1_state[1], player1_state[2] + coins_stolen)
+                    new_player2_state = (player2_state[0], player2_state[1], player2_state[2] - coins_stolen)
         elif coup_counter_state == 1:
             new_coup_counter_state = 0
             if action == constants.KILL_CARD_1:
@@ -242,11 +267,11 @@ class CoupMatchupEnvironment:
         :return: The stored list of winning states for player
         """
         if player == 1:
-            assert self._player_1_winning_region is not None, f"Player {player} winning region not defined for {self} "\
+            assert self._player_1_winning_region is not None, f"Player {player} winning region not defined for {self} " \
                                                               f"call {self}.solve()"
             return self._player_1_winning_region
         elif player == 2:
-            assert self._player_2_winning_region is not None, f"Player {player} winning region not defined for {self} "\
+            assert self._player_2_winning_region is not None, f"Player {player} winning region not defined for {self} " \
                                                               f"call {self}.solve()"
             return self._player_2_winning_region
         else:
