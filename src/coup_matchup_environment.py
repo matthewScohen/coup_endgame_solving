@@ -251,7 +251,67 @@ class CoupMatchupEnvironment:
         :param player: An integer representing the player who's winning region should be returned
         :return: A list of states that are winning for player
         """
-        return list()
+
+        winning_states = set()
+        losing_states = set()
+        undecided_states = set(self.states)
+
+        # Initialize winning and losing states
+        for state in self.states:
+            if self._is_winning_state(state, player):
+                winning_states.add(state)
+                undecided_states.remove(state)
+            elif self._is_losing_state(state, player):
+                losing_states.add(state)
+                undecided_states.remove(state)
+
+        # Iteratively update states
+        while undecided_states:
+            new_winning_states = set()
+            new_losing_states = set()
+
+            for state in undecided_states:
+                if self._can_force_win(state, player, winning_states, losing_states):
+                    new_winning_states.add(state)
+                elif self._all_leads_to_loss(state, player, losing_states):
+                    new_losing_states.add(state)
+
+            if not new_winning_states and not new_losing_states:
+                break  # No more states can be updated
+
+            winning_states.update(new_winning_states)
+            losing_states.update(new_losing_states)
+            undecided_states -= (new_winning_states | new_losing_states)
+
+        return list(winning_states)
+
+    def _is_winning_state(self, state, player):
+        opponent = 1 if player == 2 else 2
+        opponent_state = state[opponent - 1]
+        # A winning state is when the opponent has no alive cards
+        return opponent_state[0] == constants.DEAD and opponent_state[1] == constants.DEAD
+
+    def _is_losing_state(self, state, player):
+        player_state = state[player - 1]
+        # A losing state is when the player has no alive cards
+        return player_state[0] == constants.DEAD and player_state[1] == constants.DEAD
+
+    def _can_force_win(self, state, player, winning_states, losing_states):
+        # Check if there's an action that leads to a winning state
+        for action in self._get_enabled_actions(state):
+            if action in self.transitions[state]:
+                next_state = self.transitions[state][action]
+                if next_state in winning_states:
+                    return True
+        return False
+
+    def _all_leads_to_loss(self, state, player, losing_states):
+        # Check if all actions lead to losing states
+        for action in self._get_enabled_actions(state):
+            next_state = self.transitions[state][action]
+            if next_state not in losing_states:
+                return False
+        return True
 
     def solve(self):
         self.states = self._get_states()
