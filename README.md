@@ -39,8 +39,8 @@ In order to use this project...
 
 ## Authors
 
-Matthew Cohen  - 
-Reinier Carnero  - 
+Matthew Cohen  - cohen.matthew@ufl.edu\
+Reinier Carnero  - \
 Lucas Mueller  - Lucas.Mueller@ufl.edu
 
 Project Link: [https://github.com/matthewScohen/coup_endgame_solving.git](https://github.com/matthewScohen/coup_endgame_solving.git)
