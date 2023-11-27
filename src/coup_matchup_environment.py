@@ -1,3 +1,4 @@
+import copy
 import itertools
 import constants
 
@@ -137,7 +138,7 @@ class CoupMatchupEnvironment:
         transitions = dict(
             zip(self.states, [dict(zip(self.actions, [None for _ in self.actions])) for _ in self.states]))
         for state in transitions:
-            for action in state:
+            for action in transitions[state]:
                 if action in self._get_enabled_actions(state):
                     transitions[state][action] = self._transition(state, action)
                 else:
@@ -151,7 +152,6 @@ class CoupMatchupEnvironment:
         :param action: The action being taken from state
         :return: The resulting state from taking action from the input state
         """
-        # TODO implement game transition logic here
         # unpack state
         player1_state, player2_state, turn, assassinate_counter_state, foreign_aid_counter_state, \
         steal_counter_state, coup_counter_state = state
@@ -187,7 +187,7 @@ class CoupMatchupEnvironment:
                 new_steal_counter_state = 1
 
         # state is a counter_state
-        if assassinate_counter_state == 1:
+        elif assassinate_counter_state == 1:
             new_assassinate_counter_state = 0
             if action == constants.BLOCK_ASSASSINATE:
                 # nothing changes if you block the assassination
@@ -252,66 +252,57 @@ class CoupMatchupEnvironment:
         :return: A list of states that are winning for player
         """
 
-        winning_states = set()
-        losing_states = set()
-        undecided_states = set(self.states)
+        attractor_sets = list()
+        # initial winning set = player final states
+        previous_attractor = self._get_goal_states(player)
+        new_attractor = set()
+        # keep track of each attractor level in attractor_sets to construct the winning policy later
+        attractor_sets.append(previous_attractor)
 
-        # Initialize winning and losing states
+        i = 1
+        while True:
+            print(f"Computing attractor level {i} for player {player}")
+            new_attractor = copy.deepcopy(previous_attractor)
+            for state in self.states:
+                if state not in previous_attractor:
+
+                    turn = state[2]
+                    if turn == player:
+                        # if state is player's state add to attractor if ANY action leads to a winning state
+                        for action in self.transitions[state]:
+                            if self.transitions[state][action] in previous_attractor:
+                                new_attractor.add(state)
+                    else:
+                        # if it is the other players turn add the state if ALL actions lead to a winning state
+                        all_actions_safe = True
+                        for action in self.transitions[state]:
+                            if self.transitions[state][action] != constants.ACTION_DISABLED \
+                                    and self.transitions[state][action] not in previous_attractor:
+                                all_actions_safe = False
+                        if all_actions_safe:
+                            new_attractor.add(state)
+            attractor_sets.append(new_attractor)
+            i += 1
+            if new_attractor == previous_attractor:
+                break
+            else:
+                previous_attractor = copy.deepcopy(new_attractor)
+
+        # TODO calculate policy here based on attractor_sets
+        return previous_attractor
+
+    def _get_goal_states(self, player):
+        """
+        :param player: The player whose goal states are returned
+        :return: A set of goal states for player (states where both of the other player's cards are dead)
+        """
+        goal_states = set()
         for state in self.states:
-            if self._is_winning_state(state, player):
-                winning_states.add(state)
-                undecided_states.remove(state)
-            elif self._is_losing_state(state, player):
-                losing_states.add(state)
-                undecided_states.remove(state)
+            opponent_state = state[1] if player == 1 else state[0]
+            if opponent_state[0] == constants.DEAD and opponent_state[1] == constants.DEAD:
+                goal_states.add(state)
 
-        # Iteratively update states
-        while undecided_states:
-            new_winning_states = set()
-            new_losing_states = set()
-
-            for state in undecided_states:
-                if self._can_force_win(state, player, winning_states, losing_states):
-                    new_winning_states.add(state)
-                elif self._all_leads_to_loss(state, player, losing_states):
-                    new_losing_states.add(state)
-
-            if not new_winning_states and not new_losing_states:
-                break  # No more states can be updated
-
-            winning_states.update(new_winning_states)
-            losing_states.update(new_losing_states)
-            undecided_states -= (new_winning_states | new_losing_states)
-
-        return list(winning_states)
-
-    def _is_winning_state(self, state, player):
-        opponent = 1 if player == 2 else 2
-        opponent_state = state[opponent - 1]
-        # A winning state is when the opponent has no alive cards
-        return opponent_state[0] == constants.DEAD and opponent_state[1] == constants.DEAD
-
-    def _is_losing_state(self, state, player):
-        player_state = state[player - 1]
-        # A losing state is when the player has no alive cards
-        return player_state[0] == constants.DEAD and player_state[1] == constants.DEAD
-
-    def _can_force_win(self, state, player, winning_states, losing_states):
-        # Check if there's an action that leads to a winning state
-        for action in self._get_enabled_actions(state):
-            if action in self.transitions[state]:
-                next_state = self.transitions[state][action]
-                if next_state in winning_states:
-                    return True
-        return False
-
-    def _all_leads_to_loss(self, state, player, losing_states):
-        # Check if all actions lead to losing states
-        for action in self._get_enabled_actions(state):
-            next_state = self.transitions[state][action]
-            if next_state not in losing_states:
-                return False
-        return True
+        return goal_states
 
     def solve(self):
         self.states = self._get_states()
@@ -327,11 +318,11 @@ class CoupMatchupEnvironment:
         :return: The stored list of winning states for player
         """
         if player == 1:
-            assert self._player_1_winning_region is not None, f"Player {player} winning region not defined for {self} " \
+            assert self._player_1_winning_region is not None, f"Player {player} winning region not defined for {self} "\
                                                               f"call {self}.solve()"
             return self._player_1_winning_region
         elif player == 2:
-            assert self._player_2_winning_region is not None, f"Player {player} winning region not defined for {self} " \
+            assert self._player_2_winning_region is not None, f"Player {player} winning region not defined for {self} "\
                                                               f"call {self}.solve()"
             return self._player_2_winning_region
         else:
