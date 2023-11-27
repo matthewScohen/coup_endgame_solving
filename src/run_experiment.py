@@ -52,8 +52,9 @@ def run_experiment():
 def main():
     player1_cards = (constants.AMBASSADOR, constants.AMBASSADOR)
     player2_cards = (constants.ASSASSIN, constants.CONTESSA)
-    matchup = CoupMatchupEnvironment(player1_cards, player2_cards)
+    # print(CoupMatchupEnvironment.get_enabled_actions((('ambassador', 'ambassador', 6), ('assassin', 'contessa', 4), 2, 0, 0, 0, 0)))
 
+    # matchup = CoupMatchupEnvironment(player1_cards, player2_cards)
     # state = (('assassin', 'contessa', 8), ('ambassador', 'ambassador', 10), 1, 0, 0, 0, 0)
     # print(CoupMatchupEnvironment.get_enabled_actions(state))
     # print(CoupMatchupEnvironment.transition(state, constants.ASSASSINATE))
