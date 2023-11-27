@@ -14,10 +14,14 @@ class CoupMatchupEnvironment:
 
         # self.transitions[state][action] = new_state
         self.transitions = None
-        self.states = None
+        self._states = None
+        self._goal_states_1 = None
+        self._goal_states_2 = None
         self.actions = None
         self._player_1_winning_region = None
         self._player_2_winning_region = None
+        self._policy_1 = None
+        self._policy_2 = None
 
     def _get_states(self):
         """
@@ -30,23 +34,25 @@ class CoupMatchupEnvironment:
 
         :return: A list of all possible states
         """
-        player1_states = self._get_player_states(self.player1_cards)
-        player2_states = self._get_player_states(self.player2_cards)
-        possible_turn_values = (1, 2)
-        possible_assassinate_counter_state_values = (0, 1)
-        possible_foreign_aid_counter_state_values = (0, 1)
-        possible_steal_counter_state_values = (0, 1)
-        possible_coup_counter_state_values = (0, 1)
+        if self._states is None:
+            player1_states = self._get_player_states(self.player1_cards)
+            player2_states = self._get_player_states(self.player2_cards)
+            possible_turn_values = (1, 2)
+            possible_assassinate_counter_state_values = (0, 1)
+            possible_foreign_aid_counter_state_values = (0, 1)
+            possible_steal_counter_state_values = (0, 1)
+            possible_coup_counter_state_values = (0, 1)
 
-        possible_states = itertools.product(player1_states, player2_states, possible_turn_values,
-                                            possible_assassinate_counter_state_values,
-                                            possible_foreign_aid_counter_state_values,
-                                            possible_steal_counter_state_values, possible_coup_counter_state_values)
-        # remove states where both players have 2 dead cards
-        possible_states = [state for state in possible_states if
-                           state[0][0] != "dead" or state[0][1] != "dead" or state[1][0] != "dead"
-                           or state[1][1] != "dead"]
-        return list(possible_states)
+            possible_states = itertools.product(player1_states, player2_states, possible_turn_values,
+                                                possible_assassinate_counter_state_values,
+                                                possible_foreign_aid_counter_state_values,
+                                                possible_steal_counter_state_values, possible_coup_counter_state_values)
+            # remove states where both players have 2 dead cards
+            possible_states = [state for state in possible_states if
+                               state[0][0] != "dead" or state[0][1] != "dead" or state[1][0] != "dead"
+                               or state[1][1] != "dead"]
+            self._states = list(possible_states)
+        return self._states
 
     @staticmethod
     def _get_player_states(player_cards):
@@ -81,7 +87,8 @@ class CoupMatchupEnvironment:
         actions.extend(constants.counter_actions)
         return tuple(actions)
 
-    def _get_enabled_actions(self, state):
+    @staticmethod
+    def get_enabled_actions(state):
         """
         Returns a list of all actions/counter-actions that can be taken from 'state'.
 
@@ -91,9 +98,11 @@ class CoupMatchupEnvironment:
         player = state[0] if state[2] == 1 else state[1]
         player_coins = player[2]
         enabled_acts = list()
-
         # ACTION STATE
         if state[3] == 0 and state[4] == 0 and state[5] == 0 and state[6] == 0:
+            if player_coins >= 10:
+                enabled_acts.append(constants.COUP)
+                return enabled_acts
             enabled_acts.append(constants.INCOME)
             enabled_acts.append(constants.FOREIGN_AID)
             if player_coins >= 7:
@@ -136,17 +145,17 @@ class CoupMatchupEnvironment:
         :return: A transition dictionary where transitions[state][action] = new_state
         """
         transitions = dict(
-            zip(self.states, [dict(zip(self.actions, [None for _ in self.actions])) for _ in self.states]))
+            zip(self._states, [dict(zip(self.actions, [None for _ in self.actions])) for _ in self._states]))
         for state in transitions:
             for action in transitions[state]:
-                if action in self._get_enabled_actions(state):
-                    transitions[state][action] = self._transition(state, action)
+                if action in self.get_enabled_actions(state):
+                    transitions[state][action] = self.transition(state, action)
                 else:
                     transitions[state][action] = constants.ACTION_DISABLED
         return transitions
 
     @staticmethod
-    def _transition(state, action):
+    def transition(state, action):
         """
         :param state: An initial state the action is being taken from
         :param action: The action being taken from state
@@ -176,6 +185,10 @@ class CoupMatchupEnvironment:
                 new_foreign_aid_counter_state = 1
             elif action == constants.COUP:
                 new_coup_counter_state = 1
+                if turn == 1:
+                    new_player1_state = (player1_state[0], player1_state[1], player1_state[2] - 7)
+                elif turn == 2:
+                    new_player2_state = (player2_state[0], player2_state[1], player2_state[2] - 7)
             elif action == constants.TAX:
                 if turn == 1:
                     new_player1_state = (player1_state[0], player1_state[1], player1_state[2] + 3)
@@ -244,34 +257,35 @@ class CoupMatchupEnvironment:
                      new_foreign_aid_counter_state, new_steal_counter_state, new_coup_counter_state)
         return new_state
 
-    def _solve_winning_region(self, player):
+    def _solve_winning_region(self, player, verbose=False):
         """
         Calculates and returns the winning region of player using the two player attractor algorithm
-
         :param player: An integer representing the player who's winning region should be returned
         :return: A list of states that are winning for player
         """
 
+        policy = dict(zip(self._states, [None for _ in self._states]))
         attractor_sets = list()
         # initial winning set = player final states
-        previous_attractor = self._get_goal_states(player)
+        previous_attractor = self.get_goal_states(player)
         new_attractor = set()
         # keep track of each attractor level in attractor_sets to construct the winning policy later
         attractor_sets.append(previous_attractor)
 
         i = 1
         while True:
-            print(f"Computing attractor level {i} for player {player}")
+            if verbose:
+                print(f"Computing attractor level {i} for player {player}")
             new_attractor = copy.deepcopy(previous_attractor)
-            for state in self.states:
+            for state in self._states:
                 if state not in previous_attractor:
-
                     turn = state[2]
                     if turn == player:
                         # if state is player's state add to attractor if ANY action leads to a winning state
                         for action in self.transitions[state]:
                             if self.transitions[state][action] in previous_attractor:
                                 new_attractor.add(state)
+                                policy[state] = action
                     else:
                         # if it is the other players turn add the state if ALL actions lead to a winning state
                         all_actions_safe = True
@@ -289,32 +303,43 @@ class CoupMatchupEnvironment:
                 previous_attractor = copy.deepcopy(new_attractor)
 
         # TODO calculate policy here based on attractor_sets
-        return previous_attractor
+        # policy[state] = actions that result in state at lower attractor_set level
+        return previous_attractor, policy
 
-    def _get_goal_states(self, player):
+    def get_goal_states(self, player):
         """
         :param player: The player whose goal states are returned
         :return: A set of goal states for player (states where both of the other player's cards are dead)
         """
-        goal_states = set()
-        for state in self.states:
-            opponent_state = state[1] if player == 1 else state[0]
-            if opponent_state[0] == constants.DEAD and opponent_state[1] == constants.DEAD:
-                goal_states.add(state)
+        if player == 1 and self._goal_states_1 is not None:
+            return self._goal_states_1
+        if player == 2 and self._goal_states_2 is not None:
+            return self._goal_states_2
+        else:
+            goal_states = set()
+            for state in self._states:
+                opponent_state = state[1] if player == 1 else state[0]
+                if opponent_state[0] == constants.DEAD and opponent_state[1] == constants.DEAD:
+                    goal_states.add(state)
+            if player == 1:
+                self._goal_states_1 = goal_states
+            elif player == 2:
+                self._goal_states_2 = goal_states
+            else:
+                raise IndexError
+            return goal_states
 
-        return goal_states
-
-    def solve(self):
-        self.states = self._get_states()
+    def solve(self, verbose=False):
+        self._states = self._get_states()
         self.actions = self._get_actions()
         self.transitions = self._get_transitions()
 
-        self._player_1_winning_region = self._solve_winning_region(player=1)
-        self._player_2_winning_region = self._solve_winning_region(player=2)
+        self._player_1_winning_region, self._policy_1 = self._solve_winning_region(player=1, verbose=verbose)
+        self._player_2_winning_region, self._policy_2 = self._solve_winning_region(player=2, verbose=verbose)
 
     def get_win_region(self, player):
         """
-        :param player: An integer representing the player who's winning region should be returned
+        :param player: An integer representing the player whose winning region should be returned
         :return: The stored list of winning states for player
         """
         if player == 1:
@@ -327,3 +352,11 @@ class CoupMatchupEnvironment:
             return self._player_2_winning_region
         else:
             raise Exception(f"Player {player} not defined in {self}")
+
+    def get_policy(self, player):
+        """
+        :param player: An integer representing the player whose policy should be returned
+        :return: A policy dict for player of the form policy[state] = action
+        """
+        policy = self._policy_1 if player == 1 else self._policy_2
+        return policy
