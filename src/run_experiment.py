@@ -67,9 +67,11 @@ def run_experiment(path="results.txt", verbose=False, num_cores=1):
     """
     if num_cores < 1:
         raise Exception(f"Error, value of {num_cores} for num_cores not allowed")
-    card_pairs = list(itertools.product(constants.CARDS, constants.CARDS))
+    # Compute combinations of cards since (DUKE,CAPTAIN) is the same as (CAPTAIN,DUKE)
+    card_pairs = list(itertools.combinations(constants.CARDS, 2))
+    # Add duplicate pairs (CAPTAIN, CAPTAIN), (DUKE,DUKE), etc.
+    card_pairs.extend([(card, card) for card in constants.CARDS])
     matchups = list(itertools.product(card_pairs, card_pairs))
-
     i = 0
     if num_cores == 1:
         with open(path, "w") as file:
@@ -96,7 +98,7 @@ def run_experiment(path="results.txt", verbose=False, num_cores=1):
 
 
 def main():
-    run_experiment(verbose=False, num_cores=8)
+    run_experiment(verbose=False, num_cores=1)
 
 
 if __name__ == "__main__":
