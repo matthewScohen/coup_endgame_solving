@@ -88,7 +88,8 @@ def run_experiment(path="results.txt", verbose=False, num_cores=1):
 
                 i = 0
                 for future in concurrent.futures.as_completed(future_results):
-                    result = future.result()
+                    winner, _, _, matchup = future.result()
+                    result = f"{matchup.player1_cards}, {matchup.player2_cards}, {winner}"
                     write_to_file(result, file, lock)
                     print(f"Solved {i + 1}/{len(matchups)} matchups")
                     i += 1
