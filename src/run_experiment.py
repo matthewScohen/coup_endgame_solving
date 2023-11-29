@@ -47,7 +47,7 @@ def get_game_run(matchup: CoupMatchupEnvironment, policy_1: dict, policy_2: dict
 
 def run_experiment(path="results.txt", verbose=False):
     """
-    Run and record the result of all matchups
+    Evaluate all possible matchups and write the results to the file specified by path
     """
     card_pairs = list(itertools.product(constants.CARDS, constants.CARDS))
     matchups = list(itertools.product(card_pairs, card_pairs))
