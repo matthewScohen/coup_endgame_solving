@@ -58,7 +58,7 @@ def write_to_file(result, file, lock):
         lock.release()
 
 
-def run_experiment(path="results.txt", verbose=False, num_cores=1):
+def run_experiment(path="../data/results.txt", verbose=False, num_cores=1):
     """
     Evaluate all possible matchups and write the results to the file specified by path
     :param path: Path of file to write results to
@@ -83,7 +83,7 @@ def run_experiment(path="results.txt", verbose=False, num_cores=1):
     else:
         max_workers = os.cpu_count() if num_cores > os.cpu_count() else num_cores
         with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
-            with open('results.txt', 'w') as file:
+            with open(path, 'w') as file:
                 lock = threading.Lock()
                 future_results = [executor.submit(run_matchup, matchup[0], matchup[1], verbose=verbose)
                                   for matchup in matchups]
