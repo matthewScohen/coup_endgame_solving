@@ -1,24 +1,26 @@
 import itertools
 import random
-import csv
+import threading
+import concurrent.futures
+import os
 
 import constants
 from coup_matchup_environment import CoupMatchupEnvironment
 
 
 def run_matchup(player1_cards, player2_cards, verbose=False):
-    matchup = CoupMatchupEnvironment(player1_cards, player2_cards)
-    matchup.solve(verbose=verbose)
-    initial_state = matchup.get_start_game_state()
+    matchup_env = CoupMatchupEnvironment(player1_cards, player2_cards)
+    matchup_env.solve(verbose=verbose)
+    initial_state = matchup_env.get_start_game_state()
 
     winner = None
-    if initial_state in matchup.get_win_region(1):
+    if initial_state in matchup_env.get_win_region(1):
         winner = 1
-    elif initial_state in matchup.get_win_region(2):
+    elif initial_state in matchup_env.get_win_region(2):
         winner = 2
 
-    assert winner is not None, f"Error with {matchup}, no winner found."
-    return winner, matchup.get_policy(1), matchup.get_policy(2), matchup
+    assert winner is not None, f"Error with {matchup_env}, no winner found."
+    return winner, matchup_env.get_policy(1), matchup_env.get_policy(2), matchup_env
 
 
 def get_game_run(matchup: CoupMatchupEnvironment, policy_1: dict, policy_2: dict):
@@ -45,23 +47,55 @@ def get_game_run(matchup: CoupMatchupEnvironment, policy_1: dict, policy_2: dict
     return run
 
 
-def run_experiment(path="results.txt", verbose=False):
+def write_to_file(result, file, lock):
+    """
+    Write to a file in a thread safe way
+    """
+    lock.acquire()
+    try:
+        file.write(f"{result}\n")
+    finally:
+        lock.release()
+
+
+def run_experiment(path="results.txt", verbose=False, num_cores=1):
     """
     Evaluate all possible matchups and write the results to the file specified by path
+    :param path: Path of file to write results to
+    :param verbose: Boolean value indicating whether to print matchup debug info
+    :param num_cores: Number of cores to use for parallel processing
     """
+    if num_cores < 1:
+        raise Exception(f"Error, value of {num_cores} for num_cores not allowed")
     card_pairs = list(itertools.product(constants.CARDS, constants.CARDS))
     matchups = list(itertools.product(card_pairs, card_pairs))
 
     i = 0
-    with open(path, "w") as file:
-        for matchup in matchups:
-            print(f"Solving matchup {i+1}/{len(matchups)}")
-            winner, _, _, _ = run_matchup(matchup[0], matchup[1], verbose=verbose)
-            file.write(f"{matchup[0]},{matchup[1]},{winner}\n")
+    if num_cores == 1:
+        with open(path, "w") as file:
+            for matchup in matchups:
+                winner, _, _, _ = run_matchup(matchup[0], matchup[1], verbose=verbose)
+                file.write(f"{matchup[0]},{matchup[1]},{winner}\n")
+                print(f"Solved {i + 1}/{len(matchups)} matchups")
+                i += 1
+    else:
+        max_workers = os.cpu_count() if num_cores > os.cpu_count() else num_cores
+        with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+            with open('results.txt', 'w') as file:
+                lock = threading.Lock()
+                future_results = [executor.submit(run_matchup, matchup[0], matchup[1], verbose=verbose)
+                                  for matchup in matchups]
+
+                i = 0
+                for future in concurrent.futures.as_completed(future_results):
+                    result = future.result()
+                    write_to_file(result, file, lock)
+                    print(f"Solved {i + 1}/{len(matchups)} matchups")
+                    i += 1
 
 
 def main():
-    run_experiment(verbose=True)
+    run_experiment(verbose=False, num_cores=8)
 
 
 if __name__ == "__main__":
