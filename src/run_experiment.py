@@ -25,9 +25,11 @@ def run_matchup(player1_cards, player2_cards, verbose=False):
 
 def get_game_run(matchup: CoupMatchupEnvironment, policy_1: dict, policy_2: dict):
     """
-    :param policy_1:
-    :param policy_2:
-    :param matchup:
+    Returns a list in the form (state, action, state, action...) representing a run of game matchup with the
+    given policies.
+    :param policy_1: Policy for player 1
+    :param policy_2: Policy for player 2
+    :param matchup: CoupMatchupEnvironment environment of the game
     :return:
     """
     run = list()
