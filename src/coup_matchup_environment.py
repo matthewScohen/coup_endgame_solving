@@ -54,91 +54,16 @@ class CoupMatchupEnvironment:
             self._states = list(possible_states)
         return self._states
 
-    @staticmethod
-    def _get_player_states(player_cards):
-        """
-        player_states are of the form (card, card, coin_count) where card is either the value of the
-        alive card or "dead" and coin_count is the number of coins the player has.
-
-        :param player_cards: A tuple of the player's cards
-        :return: A list of all possible player states
-        """
-        card0_states = (player_cards[0], "dead")
-        card1_states = (player_cards[1], "dead")
-        # players can have at most 12 coins since they must coup if they have 10+ and can take at most 3 at a time
-        coin_states = [n for n in range(13)]
-        player_states = itertools.product(card0_states, card1_states, coin_states)
-        return list(player_states)
-
-    def get_start_game_state(self):
-        """
-        :return: The state that represents the start of a new game (both players have their cards alive and 2 coins)
-        """
-        player1_state = (self.player1_cards[0], self.player1_cards[1], 2)
-        player2_state = (self.player2_cards[0], self.player2_cards[1], 2)
-        start_game_state = (player1_state, player2_state, 1, 0, 0, 0, 0)
-        return start_game_state
-
     def _get_actions(self):
         """
         :return: A tuple of all possible actions (including counter-actions)
         """
-        actions = list(constants.actions)
-        actions.extend(constants.counter_actions)
-        return tuple(actions)
-
-    @staticmethod
-    def get_enabled_actions(state):
-        """
-        Returns a list of all actions/counter-actions that can be taken from 'state'.
-
-        :param state: The state from which player is taking actions
-        :return: A list of all possible actions that can be taken from 'state'
-        """
-        player = state[0] if state[2] == 1 else state[1]
-        player_coins = player[2]
-        enabled_acts = list()
-        # ACTION STATE
-        if state[3] == 0 and state[4] == 0 and state[5] == 0 and state[6] == 0:
-            if player_coins >= 10:
-                enabled_acts.append(constants.COUP)
-                return enabled_acts
-            enabled_acts.append(constants.INCOME)
-            enabled_acts.append(constants.FOREIGN_AID)
-            if player_coins >= 7:
-                enabled_acts.append(constants.COUP)
-            if constants.DUKE in player:
-                enabled_acts.append(constants.TAX)
-            if constants.ASSASSIN in player and player_coins >= 3:
-                enabled_acts.append(constants.ASSASSINATE)
-            if constants.CAPTAIN in player:
-                enabled_acts.append(constants.STEAL)
-        # COUNTER ACTION STATES
-        # counter-assassinate state
-        elif state[3] == 1:
-            if player[0] != constants.DEAD:
-                enabled_acts.append(constants.KILL_CARD_1)
-            if player[1] != constants.DEAD:
-                enabled_acts.append(constants.KILL_CARD_2)
-            if constants.CONTESSA in player:
-                enabled_acts.append(constants.BLOCK_ASSASSINATE)
-        # counter-foreign-aid state
-        elif state[4] == 1 and constants.DUKE in player:
-            enabled_acts.append(constants.BLOCK_FOREIGN_AID)
-        # counter-steal state
-        elif state[5] == 1 and (constants.CAPTAIN in player or constants.AMBASSADOR in player):
-            enabled_acts.append(constants.BLOCK_STEAL)
-        # counter-coup state
-        elif state[6] == 1:
-            if player[0] != constants.DEAD:
-                enabled_acts.append(constants.KILL_CARD_1)
-            if player[1] != constants.DEAD:
-                enabled_acts.append(constants.KILL_CARD_2)
-        # state is counter-state and you cannot counter the action
+        if self.actions is None:
+            actions = list(constants.actions)
+            actions.extend(constants.counter_actions)
+            return tuple(actions)
         else:
-            enabled_acts.append(constants.NO_ACTION)
-
-        return enabled_acts
+            return self.actions
 
     def _get_transitions(self):
         """
@@ -153,6 +78,119 @@ class CoupMatchupEnvironment:
                 else:
                     transitions[state][action] = constants.ACTION_DISABLED
         return transitions
+
+    def _solve_winning_region(self, player, verbose=False):
+        """
+        Calculates and returns the winning region of player using the two player attractor algorithm
+        :param player: An integer representing the player who's winning region should be returned
+        :return: A list of states that are winning for player
+        """
+
+        policy = dict(zip(self._states, [None for _ in self._states]))
+        attractor_sets = list()
+        # initial winning set = player final states
+        previous_attractor = self.get_goal_states(player)
+        new_attractor = set()
+        # keep track of each attractor level in attractor_sets to construct the winning policy later
+        attractor_sets.append(previous_attractor)
+
+        i = 1
+        while True:
+            if verbose:
+                print(f"Computing attractor level {i} for player {player}")
+            new_attractor = copy.deepcopy(previous_attractor)
+            for state in self._states:
+                if state not in previous_attractor:
+                    turn = state[2]
+                    if turn == player:
+                        # if state is player's state add to attractor if ANY action leads to a winning state
+                        for action in self.transitions[state]:
+                            if self.transitions[state][action] in previous_attractor:
+                                new_attractor.add(state)
+                                policy[state] = action
+                    else:
+                        # if it is the other players turn add the state if ALL actions lead to a winning state
+                        all_actions_safe = True
+                        for action in self.transitions[state]:
+                            if self.transitions[state][action] != constants.ACTION_DISABLED \
+                                    and self.transitions[state][action] not in previous_attractor:
+                                all_actions_safe = False
+                        if all_actions_safe:
+                            new_attractor.add(state)
+            attractor_sets.append(new_attractor)
+            i += 1
+            if new_attractor == previous_attractor:
+                break
+            else:
+                previous_attractor = copy.deepcopy(new_attractor)
+
+        # TODO calculate policy here based on attractor_sets
+        # policy[state] = actions that result in state at lower attractor_set level
+        return previous_attractor, policy
+
+    def get_start_game_state(self):
+        """
+        :return: The state that represents the start of a new game (both players have their cards alive and 2 coins)
+        """
+        player1_state = (self.player1_cards[0], self.player1_cards[1], 2)
+        player2_state = (self.player2_cards[0], self.player2_cards[1], 2)
+        start_game_state = (player1_state, player2_state, 1, 0, 0, 0, 0)
+        return start_game_state
+
+    def get_goal_states(self, player):
+        """
+        :param player: The player whose goal states are returned
+        :return: A set of goal states for player (states where both of the other player's cards are dead)
+        """
+        if player == 1 and self._goal_states_1 is not None:
+            return self._goal_states_1
+        if player == 2 and self._goal_states_2 is not None:
+            return self._goal_states_2
+        else:
+            goal_states = set()
+            for state in self._states:
+                opponent_state = state[1] if player == 1 else state[0]
+                if opponent_state[0] == constants.DEAD and opponent_state[1] == constants.DEAD:
+                    goal_states.add(state)
+            if player == 1:
+                self._goal_states_1 = goal_states
+            elif player == 2:
+                self._goal_states_2 = goal_states
+            else:
+                raise IndexError
+            return goal_states
+
+    def solve(self, verbose=False):
+        self._states = self._get_states()
+        self.actions = self._get_actions()
+        self.transitions = self._get_transitions()
+
+        self._player_1_winning_region, self._policy_1 = self._solve_winning_region(player=1, verbose=verbose)
+        self._player_2_winning_region, self._policy_2 = self._solve_winning_region(player=2, verbose=verbose)
+
+    def get_win_region(self, player):
+        """
+        :param player: An integer representing the player whose winning region should be returned
+        :return: The stored list of winning states for player
+        """
+        if player == 1:
+            assert self._player_1_winning_region is not None, f"Player {player} winning region not defined for {self} "\
+                                                              f"call {self}.solve()"
+            return self._player_1_winning_region
+        elif player == 2:
+            assert self._player_2_winning_region is not None, f"Player {player} winning region not defined for {self} "\
+                                                              f"call {self}.solve()"
+            return self._player_2_winning_region
+        else:
+            raise Exception(f"Player {player} not defined in {self}")
+
+    def get_policy(self, player):
+        """
+        :param player: An integer representing the player whose policy should be returned
+        :return: A policy dict for player of the form policy[state] = action
+        """
+        policy = self._policy_1 if player == 1 else self._policy_2
+        return policy
 
     @staticmethod
     def transition(state, action):
@@ -257,106 +295,71 @@ class CoupMatchupEnvironment:
                      new_foreign_aid_counter_state, new_steal_counter_state, new_coup_counter_state)
         return new_state
 
-    def _solve_winning_region(self, player, verbose=False):
+    @staticmethod
+    def get_enabled_actions(state):
         """
-        Calculates and returns the winning region of player using the two player attractor algorithm
-        :param player: An integer representing the player who's winning region should be returned
-        :return: A list of states that are winning for player
+        Returns a list of all actions/counter-actions that can be taken from 'state'.
+
+        :param state: The state from which player is taking actions
+        :return: A list of all possible actions that can be taken from 'state'
         """
-
-        policy = dict(zip(self._states, [None for _ in self._states]))
-        attractor_sets = list()
-        # initial winning set = player final states
-        previous_attractor = self.get_goal_states(player)
-        new_attractor = set()
-        # keep track of each attractor level in attractor_sets to construct the winning policy later
-        attractor_sets.append(previous_attractor)
-
-        i = 1
-        while True:
-            if verbose:
-                print(f"Computing attractor level {i} for player {player}")
-            new_attractor = copy.deepcopy(previous_attractor)
-            for state in self._states:
-                if state not in previous_attractor:
-                    turn = state[2]
-                    if turn == player:
-                        # if state is player's state add to attractor if ANY action leads to a winning state
-                        for action in self.transitions[state]:
-                            if self.transitions[state][action] in previous_attractor:
-                                new_attractor.add(state)
-                                policy[state] = action
-                    else:
-                        # if it is the other players turn add the state if ALL actions lead to a winning state
-                        all_actions_safe = True
-                        for action in self.transitions[state]:
-                            if self.transitions[state][action] != constants.ACTION_DISABLED \
-                                    and self.transitions[state][action] not in previous_attractor:
-                                all_actions_safe = False
-                        if all_actions_safe:
-                            new_attractor.add(state)
-            attractor_sets.append(new_attractor)
-            i += 1
-            if new_attractor == previous_attractor:
-                break
-            else:
-                previous_attractor = copy.deepcopy(new_attractor)
-
-        # TODO calculate policy here based on attractor_sets
-        # policy[state] = actions that result in state at lower attractor_set level
-        return previous_attractor, policy
-
-    def get_goal_states(self, player):
-        """
-        :param player: The player whose goal states are returned
-        :return: A set of goal states for player (states where both of the other player's cards are dead)
-        """
-        if player == 1 and self._goal_states_1 is not None:
-            return self._goal_states_1
-        if player == 2 and self._goal_states_2 is not None:
-            return self._goal_states_2
+        player = state[0] if state[2] == 1 else state[1]
+        player_coins = player[2]
+        enabled_acts = list()
+        # ACTION STATE
+        if state[3] == 0 and state[4] == 0 and state[5] == 0 and state[6] == 0:
+            if player_coins >= 10:
+                enabled_acts.append(constants.COUP)
+                return enabled_acts
+            enabled_acts.append(constants.INCOME)
+            enabled_acts.append(constants.FOREIGN_AID)
+            if player_coins >= 7:
+                enabled_acts.append(constants.COUP)
+            if constants.DUKE in player:
+                enabled_acts.append(constants.TAX)
+            if constants.ASSASSIN in player and player_coins >= 3:
+                enabled_acts.append(constants.ASSASSINATE)
+            if constants.CAPTAIN in player:
+                enabled_acts.append(constants.STEAL)
+        # COUNTER ACTION STATES
+        # counter-assassinate state
+        elif state[3] == 1:
+            if player[0] != constants.DEAD:
+                enabled_acts.append(constants.KILL_CARD_1)
+            if player[1] != constants.DEAD:
+                enabled_acts.append(constants.KILL_CARD_2)
+            if constants.CONTESSA in player:
+                enabled_acts.append(constants.BLOCK_ASSASSINATE)
+        # counter-foreign-aid state
+        elif state[4] == 1 and constants.DUKE in player:
+            enabled_acts.append(constants.BLOCK_FOREIGN_AID)
+        # counter-steal state
+        elif state[5] == 1 and (constants.CAPTAIN in player or constants.AMBASSADOR in player):
+            enabled_acts.append(constants.BLOCK_STEAL)
+        # counter-coup state
+        elif state[6] == 1:
+            if player[0] != constants.DEAD:
+                enabled_acts.append(constants.KILL_CARD_1)
+            if player[1] != constants.DEAD:
+                enabled_acts.append(constants.KILL_CARD_2)
+        # state is counter-state and you cannot counter the action
         else:
-            goal_states = set()
-            for state in self._states:
-                opponent_state = state[1] if player == 1 else state[0]
-                if opponent_state[0] == constants.DEAD and opponent_state[1] == constants.DEAD:
-                    goal_states.add(state)
-            if player == 1:
-                self._goal_states_1 = goal_states
-            elif player == 2:
-                self._goal_states_2 = goal_states
-            else:
-                raise IndexError
-            return goal_states
+            enabled_acts.append(constants.NO_ACTION)
 
-    def solve(self, verbose=False):
-        self._states = self._get_states()
-        self.actions = self._get_actions()
-        self.transitions = self._get_transitions()
+        return enabled_acts
 
-        self._player_1_winning_region, self._policy_1 = self._solve_winning_region(player=1, verbose=verbose)
-        self._player_2_winning_region, self._policy_2 = self._solve_winning_region(player=2, verbose=verbose)
+    @staticmethod
+    def _get_player_states(player_cards):
+        """
+        player_states are of the form (card, card, coin_count) where card is either the value of the
+        alive card or "dead" and coin_count is the number of coins the player has.
 
-    def get_win_region(self, player):
+        :param player_cards: A tuple of the player's cards
+        :return: A list of all possible player states
         """
-        :param player: An integer representing the player whose winning region should be returned
-        :return: The stored list of winning states for player
-        """
-        if player == 1:
-            assert self._player_1_winning_region is not None, f"Player {player} winning region not defined for {self} "\
-                                                              f"call {self}.solve()"
-            return self._player_1_winning_region
-        elif player == 2:
-            assert self._player_2_winning_region is not None, f"Player {player} winning region not defined for {self} "\
-                                                              f"call {self}.solve()"
-            return self._player_2_winning_region
-        else:
-            raise Exception(f"Player {player} not defined in {self}")
-
-    def get_policy(self, player):
-        """
-        :param player: An integer representing the player whose policy should be returned
-        :return: A policy dict for player of the form policy[state] = action
-        """
-        policy = self._policy_1 if player == 1 else self._policy_2
-        return policy
+        card0_states = (player_cards[0], "dead")
+        card1_states = (player_cards[1], "dead")
+        # players can have at most 12 coins since they must coup if they have 10+ and can take at most 3 at a time
+        coin_states = [n for n in range(13)]
+        player_states = itertools.product(card0_states, card1_states, coin_states)
+        return list(player_states)
