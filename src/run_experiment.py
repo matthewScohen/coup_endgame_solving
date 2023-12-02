@@ -156,5 +156,6 @@ def main():
     matchup.solve(verbose=True)
     matchup.play_game()
 
+
 if __name__ == "__main__":
     main()
