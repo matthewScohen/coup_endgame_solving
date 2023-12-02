@@ -50,6 +50,10 @@ def get_game_run(matchup: CoupMatchupEnvironment, policy_1: dict, policy_2: dict
 
 
 def get_run_graph(matchup: CoupMatchupEnvironment, pi1: dict, pi2: dict):
+    """
+    Returns a graph in the form graph[state] = list(successor_states) that shows a game run where the player who wins
+    takes their optimal action and the player who loses has all possible successor states listed
+    """
     initial_state = matchup.get_start_game_state()
     graph = dict()
     _get_run_graph(initial_state, graph, matchup, pi1, pi2)
@@ -57,6 +61,9 @@ def get_run_graph(matchup: CoupMatchupEnvironment, pi1: dict, pi2: dict):
 
 
 def _get_run_graph(initial_state, graph: dict, matchup: CoupMatchupEnvironment, pi1: dict, pi2: dict):
+    """
+    Utility function -- see get_run_graph
+    """
     state = initial_state
     graph[state] = list()
     if state in matchup.get_goal_states(1) or state in matchup.get_goal_states(2):
