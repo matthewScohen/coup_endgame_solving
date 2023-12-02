@@ -151,8 +151,10 @@ def run_experiment(path="../data/results.txt", verbose=False, num_cores=1, overw
 
 
 def main():
-    run_experiment(verbose=False, num_cores=1)
-
+    # run_experiment(verbose=False, num_cores=1)
+    matchup = CoupMatchupEnvironment((constants.DUKE, constants.DUKE), (constants.CAPTAIN, constants.CAPTAIN))
+    matchup.solve(verbose=True)
+    matchup.play_game()
 
 if __name__ == "__main__":
     main()

@@ -192,6 +192,24 @@ class CoupMatchupEnvironment:
         policy = self._policy_1 if player == 1 else self._policy_2
         return policy
 
+    def play_game(self):
+        """
+        Allow the user to play a run of the game as the losing player to test their strategies
+        """
+        state = self.get_start_game_state()
+        winner = 1 if state in self.get_win_region(1) else 2
+        while state not in self.get_goal_states(1) and state not in self.get_goal_states(2):
+            print(state)
+            turn = state[2]
+            if turn != winner:
+                action = input(f"Choose an action from: {self.get_enabled_actions(state)}\n")
+                while action not in self.get_enabled_actions(state):
+                    action = input(f"Choose an action from: {self.get_enabled_actions(state)}\n")
+            else:
+                action = self._policy_1[state] if turn == 1 else self._policy_2[state]
+            print(f"Player {turn} taking action {action}")
+            state = CoupMatchupEnvironment.transition(state, action)
+
     @staticmethod
     def transition(state, action):
         """
