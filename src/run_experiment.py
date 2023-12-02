@@ -154,7 +154,7 @@ def main():
     # run_experiment(verbose=False, num_cores=1)
     matchup = CoupMatchupEnvironment((constants.DUKE, constants.DUKE), (constants.CAPTAIN, constants.CAPTAIN))
     matchup.solve(verbose=True)
-    matchup.play_game()
+    matchup.play_game(save_run=True, path="../data/DDvCC_run.txt")
 
 
 if __name__ == "__main__":

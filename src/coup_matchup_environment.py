@@ -192,10 +192,11 @@ class CoupMatchupEnvironment:
         policy = self._policy_1 if player == 1 else self._policy_2
         return policy
 
-    def play_game(self):
+    def play_game(self, save_run=False, path=None):
         """
         Allow the user to play a run of the game as the losing player to test their strategies
         """
+        run = list()
         state = self.get_start_game_state()
         winner = 1 if state in self.get_win_region(1) else 2
         while state not in self.get_goal_states(1) and state not in self.get_goal_states(2):
@@ -208,7 +209,16 @@ class CoupMatchupEnvironment:
             else:
                 action = self._policy_1[state] if turn == 1 else self._policy_2[state]
             print(f"Player {turn} taking action {action}")
+
+            run.append(state)
+            run.append(action)
             state = CoupMatchupEnvironment.transition(state, action)
+        run.append(state)
+        print(state)
+        if save_run:
+            with open(path, 'w') as file:
+                for item in run:
+                    file.write(f"{item}\n")
 
     @staticmethod
     def transition(state, action):

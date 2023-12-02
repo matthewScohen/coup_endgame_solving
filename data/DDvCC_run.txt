@@ -1,0 +1,51 @@
+(('duke', 'duke', 2), ('captain', 'captain', 2), 1, 0, 0, 0, 0)
+tax
+(('duke', 'duke', 5), ('captain', 'captain', 2), 2, 0, 0, 0, 0)
+steal
+(('duke', 'duke', 5), ('captain', 'captain', 2), 1, 0, 0, 1, 0)
+no_action
+(('duke', 'duke', 3), ('captain', 'captain', 4), 1, 0, 0, 0, 0)
+tax
+(('duke', 'duke', 6), ('captain', 'captain', 4), 2, 0, 0, 0, 0)
+steal
+(('duke', 'duke', 6), ('captain', 'captain', 4), 1, 0, 0, 1, 0)
+no_action
+(('duke', 'duke', 4), ('captain', 'captain', 6), 1, 0, 0, 0, 0)
+tax
+(('duke', 'duke', 7), ('captain', 'captain', 6), 2, 0, 0, 0, 0)
+steal
+(('duke', 'duke', 7), ('captain', 'captain', 6), 1, 0, 0, 1, 0)
+no_action
+(('duke', 'duke', 5), ('captain', 'captain', 8), 1, 0, 0, 0, 0)
+tax
+(('duke', 'duke', 8), ('captain', 'captain', 8), 2, 0, 0, 0, 0)
+steal
+(('duke', 'duke', 8), ('captain', 'captain', 8), 1, 0, 0, 1, 0)
+no_action
+(('duke', 'duke', 6), ('captain', 'captain', 10), 1, 0, 0, 0, 0)
+tax
+(('duke', 'duke', 9), ('captain', 'captain', 10), 2, 0, 0, 0, 0)
+coup
+(('duke', 'duke', 9), ('captain', 'captain', 3), 1, 0, 0, 0, 1)
+kill_card_1
+(('dead', 'duke', 9), ('captain', 'captain', 3), 1, 0, 0, 0, 0)
+coup
+(('dead', 'duke', 2), ('captain', 'captain', 3), 2, 0, 0, 0, 1)
+kill_card_2
+(('dead', 'duke', 2), ('captain', 'dead', 3), 2, 0, 0, 0, 0)
+steal
+(('dead', 'duke', 2), ('captain', 'dead', 3), 1, 0, 0, 1, 0)
+no_action
+(('dead', 'duke', 0), ('captain', 'dead', 5), 1, 0, 0, 0, 0)
+tax
+(('dead', 'duke', 3), ('captain', 'dead', 5), 2, 0, 0, 0, 0)
+steal
+(('dead', 'duke', 3), ('captain', 'dead', 5), 1, 0, 0, 1, 0)
+no_action
+(('dead', 'duke', 1), ('captain', 'dead', 7), 1, 0, 0, 0, 0)
+tax
+(('dead', 'duke', 4), ('captain', 'dead', 7), 2, 0, 0, 0, 0)
+coup
+(('dead', 'duke', 4), ('captain', 'dead', 0), 1, 0, 0, 0, 1)
+kill_card_2
+(('dead', 'dead', 4), ('captain', 'dead', 0), 1, 0, 0, 0, 0)
