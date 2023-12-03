@@ -220,6 +220,17 @@ class CoupMatchupEnvironment:
                 for item in run:
                     file.write(f"{item}\n")
 
+    def save_game_graph_edge_list(self, path: str):
+        if self.transitions is None:
+            raise Exception("Cannot save game graph game is not solved")
+        with open(path, 'w') as file:
+            file.write(f"source,target\n")
+            for source_state in self.transitions:
+                for action in self.transitions[source_state]:
+                    target_state = self.transitions[source_state][action]
+                    if target_state != constants.ACTION_DISABLED:
+                        file.write(f"{str(source_state).replace(',', '.')},{str(target_state).replace(',', '.')}\n")
+
     @staticmethod
     def transition(state, action):
         """

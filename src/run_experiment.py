@@ -60,6 +60,14 @@ def get_run_graph(matchup: CoupMatchupEnvironment, pi1: dict, pi2: dict):
     return graph
 
 
+def save_run_graph(path: str, graph):
+    with open(path, 'w') as file:
+        file.write(f"source,target\n")
+        for source in graph.keys():
+            for target in graph[source]:
+                file.write(f"{str(source).replace(',', '.')},{str(target).replace(',', '.')}\n")
+
+
 def _get_run_graph(initial_state, graph: dict, matchup: CoupMatchupEnvironment, pi1: dict, pi2: dict):
     """
     Utility function -- see get_run_graph
@@ -152,9 +160,12 @@ def run_experiment(path="../data/results.txt", verbose=False, num_cores=1, overw
 
 def main():
     # run_experiment(verbose=False, num_cores=1)
-    matchup = CoupMatchupEnvironment((constants.DUKE, constants.DUKE), (constants.CAPTAIN, constants.CAPTAIN))
+    matchup = CoupMatchupEnvironment((constants.DUKE, constants.ASSASSIN), (constants.AMBASSADOR, constants.AMBASSADOR))
     matchup.solve(verbose=True)
-    matchup.play_game(save_run=True, path="../data/DDvCC_run.txt")
+    matchup.save_game_graph_edge_list(path="../data/DAvAMAM_full_graph.csv")
+    graph = get_run_graph(matchup, pi1=matchup.get_policy(1), pi2=matchup.get_policy(2))
+    save_run_graph(path="../data/DAvAMAM_all_runs.csv", graph=graph)
+    matchup.play_game(save_run=True, path="../data/DAvAMAM_run.txt")
 
 
 if __name__ == "__main__":

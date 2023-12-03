@@ -1,0 +1,15 @@
+(('duke', 'assassin', 2), ('ambassador', 'ambassador', 2), 1, 0, 0, 0, 0)
+tax
+(('duke', 'assassin', 5), ('ambassador', 'ambassador', 2), 2, 0, 0, 0, 0)
+income
+(('duke', 'assassin', 5), ('ambassador', 'ambassador', 3), 1, 0, 0, 0, 0)
+assassinate
+(('duke', 'assassin', 5), ('ambassador', 'ambassador', 3), 2, 1, 0, 0, 0)
+kill_card_1
+(('duke', 'assassin', 5), ('dead', 'ambassador', 3), 2, 0, 0, 0, 0)
+income
+(('duke', 'assassin', 5), ('dead', 'ambassador', 4), 1, 0, 0, 0, 0)
+assassinate
+(('duke', 'assassin', 5), ('dead', 'ambassador', 4), 2, 1, 0, 0, 0)
+kill_card_2
+(('duke', 'assassin', 5), ('dead', 'dead', 4), 2, 0, 0, 0, 0)
